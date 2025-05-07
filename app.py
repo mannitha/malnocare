@@ -73,9 +73,8 @@ def height_step():
         h_img, w_img, _ = img.shape
 
         st.markdown("🟢 Click exactly two points on the scale.")
-
         img_rgb = cv2.cvtColor(img, cv2.COLOR_BGR2RGB)
-        pil_img = Image.fromarray(img_rgb)
+        pil_img = Image.fromarray(img_rgb).convert("RGB")  # Ensure the image is in RGB mode
 
         canvas_result = st_canvas(
             background_image=pil_img,
@@ -122,6 +121,8 @@ def arm_step():
         cam = st.button("📷 Camera")
     with col2:
         upload = st.button("🖼 Upload")
+
+    mode = st.session_state.get("arm_input", None)
 
     if cam:
         st.session_state.arm_input = "camera"
