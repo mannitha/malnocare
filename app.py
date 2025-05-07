@@ -73,22 +73,18 @@ def height_step():
         h_img, w_img, _ = img.shape
 
         st.markdown("🟢 Click exactly two points on the scale.")
-        from PIL import Image
-import cv2
-import numpy as np
 
-# Assume img is your OpenCV image (NumPy array)
-img_rgb = cv2.cvtColor(img, cv2.COLOR_BGR2RGB)
-pil_img = Image.fromarray(img_rgb)  # This is correct
+        img_rgb = cv2.cvtColor(img, cv2.COLOR_BGR2RGB)
+        pil_img = Image.fromarray(img_rgb)
 
-canvas_result = st_canvas(
-    background_image=pil_img,  # must be a PIL.Image
-    height=img.shape[0],
-    width=img.shape[1],
-    drawing_mode="point",
-    point_display_radius=5,
-    key="canvas",
-)
+        canvas_result = st_canvas(
+            background_image=pil_img,
+            height=img.shape[0],
+            width=img.shape[1],
+            drawing_mode="point",
+            point_display_radius=5,
+            key="canvas",
+        )
 
         if canvas_result.json_data and len(canvas_result.json_data["objects"]) == 2:
             points = [(int(obj["left"]), int(obj["top"])) for obj in canvas_result.json_data["objects"]]
@@ -126,8 +122,6 @@ def arm_step():
         cam = st.button("📷 Camera")
     with col2:
         upload = st.button("🖼 Upload")
-
-    mode = st.session_state.get("arm_input", None)
 
     if cam:
         st.session_state.arm_input = "camera"
