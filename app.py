@@ -73,18 +73,22 @@ def height_step():
         h_img, w_img, _ = img.shape
 
         st.markdown("🟢 Click exactly two points on the scale.")
-        canvas_result = st_canvas(
-            fill_color="rgba(255, 165, 0, 0.3)",
-            stroke_width=3,
-            stroke_color="#00FF00",
-            background_image=Image.fromarray(cv2.cvtColor(img, cv2.COLOR_BGR2RGB)),
-            update_streamlit=True,
-            height=h_img,
-            width=w_img,
-            drawing_mode="point",
-            point_display_radius=5,
-            key="canvas_height",
-        )
+        from PIL import Image
+import cv2
+import numpy as np
+
+# Assume img is your OpenCV image (NumPy array)
+img_rgb = cv2.cvtColor(img, cv2.COLOR_BGR2RGB)
+pil_img = Image.fromarray(img_rgb)  # This is correct
+
+canvas_result = st_canvas(
+    background_image=pil_img,  # must be a PIL.Image
+    height=img.shape[0],
+    width=img.shape[1],
+    drawing_mode="point",
+    point_display_radius=5,
+    key="canvas",
+)
 
         if canvas_result.json_data and len(canvas_result.json_data["objects"]) == 2:
             points = [(int(obj["left"]), int(obj["top"])) for obj in canvas_result.json_data["objects"]]
