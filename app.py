@@ -38,9 +38,16 @@ def run_height_estimator():
     img_file = st.file_uploader("Upload image", type=["jpg", "jpeg", "png"])
     
     if img_file:
-        original_image = Image.open(img_file).convert("RGB")
+        try:
+            original_image = Image.open(img_file).convert("RGB")  # ✅ Force RGB
+        except Exception as e:
+            st.error(f"Error loading image: {e}")
+            return
+
         img_np = np.array(original_image)
         height, width = img_np.shape[0], img_np.shape[1]
+
+        st.image(original_image, caption="Uploaded Image Preview")  # ✅ Show preview
 
         reference_length = st.number_input(
             "Enter the real-world length of the reference object (in cm)", 
@@ -54,7 +61,7 @@ def run_height_estimator():
             fill_color="rgba(255, 165, 0, 0.3)",
             stroke_width=3,
             stroke_color="#e00",
-            background_image=original_image,  # use original image (not resized)
+            background_image=original_image,
             update_streamlit=True,
             height=height,
             width=width,
