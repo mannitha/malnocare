@@ -4,10 +4,12 @@ import numpy as np
 from PIL import Image
 import mediapipe as mp
 from streamlit_drawable_canvas import st_canvas
-from io import BytesIO
-import base64
 
 mp_pose = mp.solutions.pose
+
+def load_image(uploaded_file):
+    img = Image.open(uploaded_file)
+    return cv2.cvtColor(np.array(img), cv2.COLOR_RGB2BGR)
 
 def detect_keypoints(image):
     with mp_pose.Pose(static_image_mode=True) as pose:
@@ -25,31 +27,23 @@ def detect_keypoints(image):
 def draw_landmarks(image, head_y, foot_y):
     annotated = image.copy()
     center_x = image.shape[1] // 2
-    cv2.line(annotated, (center_x, head_y), (center_x, foot_y), (0, 255, 0), 2)
-    cv2.circle(annotated, (center_x, head_y), 5, (255, 0, 0), -1)
-    cv2.circle(annotated, (center_x, foot_y), 5, (0, 0, 255), -1)
+    cv2.line(annotated, (center_x, head_y), (center_x, foot_y), (0,255,0), 2)
+    cv2.circle(annotated, (center_x, head_y), 5, (255,0,0), -1)
+    cv2.circle(annotated, (center_x, foot_y), 5, (0,0,255), -1)
     return annotated
 
 def get_pixel_distance(p1, p2):
     return np.linalg.norm(np.array(p1) - np.array(p2))
-
-def pil_image_to_url(pil_img):
-    buf = BytesIO()
-    pil_img.save(buf, format="PNG")
-    byte_im = buf.getvalue()
-    base64_str = base64.b64encode(byte_im).decode()
-    return f"data:image/png;base64,{base64_str}"
 
 def run_height_estimator():
     st.title("📏 Height Estimator from Single Image")
     st.markdown("Upload a full-body image **with a visible reference object**, and specify its real-world length.")
 
     img_file = st.file_uploader("Upload image", type=["jpg", "jpeg", "png"])
-
+    
     if img_file:
         image = Image.open(img_file)
         img_np = np.array(image)
-        img_url = pil_image_to_url(image)
 
         reference_length = st.number_input("Enter the real-world length of the reference object (in cm)", min_value=1.0, step=0.5)
 
@@ -58,7 +52,7 @@ def run_height_estimator():
             fill_color="rgba(255, 165, 0, 0.3)",
             stroke_width=3,
             stroke_color="#e00",
-            background_image_url=img_url,  # Workaround: use image URL directly
+            background_image=image,
             update_streamlit=True,
             height=img_np.shape[0],
             width=img_np.shape[1],
@@ -73,7 +67,7 @@ def run_height_estimator():
                 x1, y1 = line["x1"], line["y1"]
                 x2, y2 = line["x2"], line["y2"]
                 pixel_dist = get_pixel_distance((x1, y1), (x2, y2))
-                calibration_factor = reference_length / pixel_dist
+                calibration_factor = reference_length / pixel_dist  # user-defined cm / pixel
 
                 st.success(f"Calibration complete: {calibration_factor:.4f} cm/pixel")
 
