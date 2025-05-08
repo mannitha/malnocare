@@ -1,8 +1,8 @@
 streamlit==1.27.0
+streamlit-image-coordinates
 opencv-python-headless==4.9.0.80
 numpy==1.26.4
 Pillow==9.5.0
 mediapipe==0.10.21
 streamlit-drawable-canvas==0.9.3
 pandas
-streamlit-image-coordinates
