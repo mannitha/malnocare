@@ -4,3 +4,4 @@ numpy==1.26.4
 Pillow==9.5.0
 mediapipe==0.10.21
 streamlit-drawable-canvas==0.9.3
+pandas
