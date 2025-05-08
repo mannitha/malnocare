@@ -1,11 +1,22 @@
+# height_estimator_with_hardcoded_calibration.py
+
 import streamlit as st
 import cv2
 import numpy as np
 from PIL import Image
 import mediapipe as mp
-from streamlit_drawable_canvas import st_canvas
+import os
+
+st.set_page_config(page_title="Height Estimator", layout="centered")
+
+# Hardcoded calibration factor (in cm/pixel)
+CALIBRATION_FACTOR = 0.2031
 
 mp_pose = mp.solutions.pose
+
+def load_image(uploaded_file):
+    img = Image.open(uploaded_file)
+    return cv2.cvtColor(np.array(img), cv2.COLOR_RGB2BGR)
 
 def detect_keypoints(image):
     with mp_pose.Pose(static_image_mode=True) as pose:
@@ -28,61 +39,48 @@ def draw_landmarks(image, head_y, foot_y):
     cv2.circle(annotated, (center_x, foot_y), 5, (0,0,255), -1)
     return annotated
 
-def get_pixel_distance(p1, p2):
-    return np.linalg.norm(np.array(p1) - np.array(p2))
+# --- UI Starts Here ---
+st.title("Height Measurement")
 
-def run_height_estimator():
-    st.title("📏 Height Estimator from Single Image")
-    st.markdown("Upload a full-body image **with a visible reference object**, and specify its real-world length.")
+# Two square buttons for camera or file upload
+col1, col2 = st.columns([1, 1])
+with col1:
+    camera_button = st.button("📷 Camera", use_container_width=True)
+with col2:
+    upload_button = st.button("🖼 Upload", use_container_width=True)
 
-    img_file = st.file_uploader("Upload image", type=["jpg", "jpeg", "png"])
+image = None
+uploaded_file = None
 
-    if img_file:
-        image = Image.open(img_file).convert("RGB")
-        np_image = np.array(image)
+if "input_mode" not in st.session_state:
+    st.session_state.input_mode = None
 
-        reference_length = st.number_input("Enter the real-world length of the reference object (in cm)", min_value=1.0, step=0.5)
+if camera_button:
+    st.session_state.input_mode = "camera"
+elif upload_button:
+    st.session_state.input_mode = "upload"
 
-        st.subheader("Step 1: Draw a line over the reference object")
-        canvas_result = st_canvas(
-            fill_color="rgba(255, 165, 0, 0.3)",
-            stroke_width=3,
-            stroke_color="#e00",
-            background_image=np_image,  # ✅ FIXED: convert to NumPy array
-            update_streamlit=True,
-            height=image.height,
-            width=image.width,
-            drawing_mode="line",
-            key="canvas",
-        )
+if st.session_state.input_mode == "camera":
+    image_data = st.camera_input("Take a picture")
+    if image_data:
+        image = load_image(image_data)
 
-        if canvas_result.json_data and "objects" in canvas_result.json_data:
-            objs = canvas_result.json_data["objects"]
-            if len(objs) >= 1 and objs[0]["type"] == "line":
-                line = objs[0]
-                x1, y1 = line["x1"], line["y1"]
-                x2, y2 = line["x2"], line["y2"]
-                pixel_dist = get_pixel_distance((x1, y1), (x2, y2))
-                calibration_factor = reference_length / pixel_dist
+elif st.session_state.input_mode == "upload":
+    uploaded_file = st.file_uploader("Upload an image", type=["jpg", "jpeg", "png"])
+    if uploaded_file:
+        image = load_image(uploaded_file)
 
-                st.success(f"Calibration complete: {calibration_factor:.4f} cm/pixel")
+# --- Estimation Mode ---
+if image is not None:
+    head_y, foot_y = detect_keypoints(image)
 
-                st.subheader("Step 2: Estimating height from landmarks")
-                image_bgr = cv2.cvtColor(np_image, cv2.COLOR_RGB2BGR)
-                head_y, foot_y = detect_keypoints(image_bgr)
+    if head_y is not None and foot_y is not None:
+        pixel_height = abs(foot_y - head_y)
+        annotated_image = draw_landmarks(image, head_y, foot_y)
+        st.image(annotated_image, caption="Detected head and foot", use_column_width=True)
 
-                if head_y is not None and foot_y is not None:
-                    pixel_height = abs(foot_y - head_y)
-                    estimated_height = calibration_factor * pixel_height
-                    annotated_img = draw_landmarks(image_bgr, head_y, foot_y)
-                    st.image(annotated_img, caption="Detected Height", channels="BGR")
-                    st.success(f"Estimated Height: **{estimated_height:.2f} cm**")
-                else:
-                    st.error("❌ Could not detect body landmarks. Please try a clearer full-body image.")
-            else:
-                st.info("Draw a line over the known-length reference object.")
-        else:
-            st.info("Draw a line to calibrate using the reference object.")
-
-if __name__ == "__main__":
-    run_height_estimator()
+        # Using the hardcoded calibration factor for height estimation
+        estimated_height = CALIBRATION_FACTOR * pixel_height
+        st.success(f"Estimated Height: *{estimated_height:.2f} cm*")
+    else:
+        st.error("Keypoints not detected. Try a clearer full-body photo.")
