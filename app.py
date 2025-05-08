@@ -2,6 +2,7 @@ import streamlit as st
 from PIL import Image
 import numpy as np
 import math
+import pandas as pd
 
 st.title("📏 Height Estimation Using Steel Scale Reference")
 
