@@ -7,10 +7,6 @@ from streamlit_drawable_canvas import st_canvas
 
 mp_pose = mp.solutions.pose
 
-def load_image(uploaded_file):
-    img = Image.open(uploaded_file).convert("RGB")
-    return cv2.cvtColor(np.array(img), cv2.COLOR_RGB2BGR)
-
 def detect_keypoints(image):
     with mp_pose.Pose(static_image_mode=True) as pose:
         results = pose.process(cv2.cvtColor(image, cv2.COLOR_BGR2RGB))
@@ -44,6 +40,7 @@ def run_height_estimator():
     if img_file:
         original_image = Image.open(img_file).convert("RGB")
         img_np = np.array(original_image)
+        height, width = img_np.shape[0], img_np.shape[1]
 
         reference_length = st.number_input(
             "Enter the real-world length of the reference object (in cm)", 
@@ -53,22 +50,14 @@ def run_height_estimator():
 
         st.subheader("Step 1: Draw a line over the reference object")
 
-        # Resize image for consistent canvas display
-        max_canvas_width = 700
-        aspect_ratio = img_np.shape[0] / img_np.shape[1]
-        canvas_width = min(max_canvas_width, img_np.shape[1])
-        canvas_height = int(canvas_width * aspect_ratio)
-
-        resized_image = original_image.resize((canvas_width, canvas_height))
-
         canvas_result = st_canvas(
             fill_color="rgba(255, 165, 0, 0.3)",
             stroke_width=3,
             stroke_color="#e00",
-            background_image=resized_image,  # ✅ Use resized image here
+            background_image=original_image,  # use original image (not resized)
             update_streamlit=True,
-            height=canvas_height,
-            width=canvas_width,
+            height=height,
+            width=width,
             drawing_mode="line",
             key="canvas",
         )
