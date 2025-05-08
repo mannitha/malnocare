@@ -4,16 +4,9 @@ import numpy as np
 from PIL import Image
 import mediapipe as mp
 from streamlit_drawable_canvas import st_canvas
-import io
-import base64
+from streamlit.components.v1 import image_to_url  # ✅ Proper image URL utility
 
 mp_pose = mp.solutions.pose
-
-def image_to_base64(image: Image.Image) -> str:
-    buffered = io.BytesIO()
-    image.save(buffered, format="PNG")
-    img_b64 = base64.b64encode(buffered.getvalue()).decode()
-    return f"data:image/png;base64,{img_b64}"
 
 def load_image(uploaded_file):
     img = Image.open(uploaded_file).convert("RGB")
@@ -52,7 +45,7 @@ def run_height_estimator():
     if img_file:
         image = Image.open(img_file).convert("RGB")
         img_np = np.array(image)
-        img_base64 = image_to_base64(image)
+        img_url = image_to_url(image, kind="png")  # ✅ Use this for cloud compatibility
 
         reference_length = st.number_input("Enter the real-world length of the reference object (in cm)", min_value=1.0, step=0.5)
 
@@ -62,7 +55,7 @@ def run_height_estimator():
             stroke_width=3,
             stroke_color="#e00",
             background_image=None,
-            background_image_url=img_base64,
+            background_image_url=img_url,
             update_streamlit=True,
             height=img_np.shape[0],
             width=img_np.shape[1],
