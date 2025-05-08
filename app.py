@@ -28,9 +28,9 @@ def detect_keypoints(image):
 def draw_landmarks(image, head_y, foot_y):
     annotated = image.copy()
     center_x = image.shape[1] // 2
-    cv2.line(annotated, (center_x, head_y), (center_x, foot_y), (0,255,0), 2)
-    cv2.circle(annotated, (center_x, head_y), 5, (255,0,0), -1)
-    cv2.circle(annotated, (center_x, foot_y), 5, (0,0,255), -1)
+    cv2.line(annotated, (center_x, head_y), (center_x, foot_y), (0, 255, 0), 2)
+    cv2.circle(annotated, (center_x, head_y), 5, (255, 0, 0), -1)
+    cv2.circle(annotated, (center_x, foot_y), 5, (0, 0, 255), -1)
     return annotated
 
 def get_pixel_distance(p1, p2):
@@ -41,7 +41,7 @@ def run_height_estimator():
     st.markdown("Upload a full-body image **with a visible reference object**, and specify its real-world length.")
 
     img_file = st.file_uploader("Upload image", type=["jpg", "jpeg", "png"])
-    
+
     if img_file:
         image = Image.open(img_file).convert("RGB")
         img_np = np.array(image)
@@ -49,19 +49,23 @@ def run_height_estimator():
         reference_length = st.number_input("Enter the real-world length of the reference object (in cm)", min_value=1.0, step=0.5)
 
         st.subheader("Step 1: Click two points on the reference object")
+
         coords = streamlit_image_coordinates(image, key="click_img")
 
-        # Handle click events
+        # Handle click events and store points
         if coords:
             if "points" not in st.session_state:
                 st.session_state.points = []
             if len(st.session_state.points) < 2:
-                st.session_state.points.append((coords['x'], coords['y']))
+                st.session_state.points.append((int(coords['x']), int(coords['y'])))
 
-        # Show selected points
+        # Create preview image with clicked points
+        preview_image = img_np.copy()
         if "points" in st.session_state:
             for i, (x, y) in enumerate(st.session_state.points):
-                st.write(f"Point {i+1}: ({x:.2f}, {y:.2f})")
+                cv2.circle(preview_image, (int(x), int(y)), 8, (0, 0, 255), -1)  # red dot
+                cv2.putText(preview_image, f"P{i+1}", (int(x)+10, int(y)-10), cv2.FONT_HERSHEY_SIMPLEX, 0.5, (0, 0, 255), 1)
+            st.image(preview_image, caption="Selected Points", channels="RGB")
 
         # Reset button
         if st.button("🔄 Reset Points"):
