@@ -40,22 +40,19 @@ def run_height_estimator():
     st.markdown("Upload a full-body image **with a visible reference object**, and specify its real-world length.")
 
     img_file = st.file_uploader("Upload image", type=["jpg", "jpeg", "png"])
-    
+
     if img_file:
         image = Image.open(img_file)
         img_np = np.array(image)
 
-        reference_length = st.number_input(
-            "Enter the real-world length of the reference object (in cm)", 
-            min_value=1.0, step=0.5
-        )
+        reference_length = st.number_input("Enter the real-world length of the reference object (in cm)", min_value=1.0, step=0.5)
 
         st.subheader("Step 1: Draw a line over the reference object")
         canvas_result = st_canvas(
             fill_color="rgba(255, 165, 0, 0.3)",
             stroke_width=3,
             stroke_color="#e00",
-            background_image=img_np,  # NumPy array avoids image_to_url issue
+            background_image=image,  # Use PIL.Image, not NumPy
             update_streamlit=True,
             height=img_np.shape[0],
             width=img_np.shape[1],
@@ -70,7 +67,7 @@ def run_height_estimator():
                 x1, y1 = line["x1"], line["y1"]
                 x2, y2 = line["x2"], line["y2"]
                 pixel_dist = get_pixel_distance((x1, y1), (x2, y2))
-                calibration_factor = reference_length / pixel_dist  # cm per pixel
+                calibration_factor = reference_length / pixel_dist  # cm / pixel
 
                 st.success(f"Calibration complete: {calibration_factor:.4f} cm/pixel")
 
