@@ -42,7 +42,7 @@ def run_height_estimator():
     img_file = st.file_uploader("Upload image", type=["jpg", "jpeg", "png"])
     
     if img_file:
-        image = Image.open(img_file)  # Keep as PIL Image
+        image = Image.open(img_file).convert("RGB")
 
         reference_length = st.number_input("Enter the real-world length of the reference object (in cm)", min_value=1.0, step=0.5)
 
