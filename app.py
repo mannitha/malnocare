@@ -41,35 +41,33 @@ def run_height_estimator():
     if img_file:
         image = Image.open(img_file).convert("RGB")
         img_np = np.array(image)
-        image_copy = img_np.copy()
 
         reference_length = st.number_input("Enter the real-world length of the reference object (in cm)", min_value=1.0, step=0.5)
 
+        # Draw any previously clicked points
+        image_for_click = img_np.copy()
+        if "points" not in st.session_state:
+            st.session_state.points = []
+
+        for i, (x, y) in enumerate(st.session_state.points):
+            cv2.circle(image_for_click, (x, y), 8, (0, 0, 255), -1)
+            cv2.putText(image_for_click, f"P{i+1}", (x + 10, y - 10), cv2.FONT_HERSHEY_SIMPLEX, 0.5, (0, 0, 255), 1)
+
         st.subheader("Step 1: Click two points on the reference object")
 
-        # Show image and get click coordinates
-        coords = streamlit_image_coordinates(image, key="click_img")
+        # Only ONE image is shown here
+        coords = streamlit_image_coordinates(Image.fromarray(image_for_click), key="click_img")
 
-        # Store click points
-        if coords:
-            if "points" not in st.session_state:
-                st.session_state.points = []
-            if len(st.session_state.points) < 2:
-                st.session_state.points.append((int(coords['x']), int(coords['y'])))
+        # Capture clicks
+        if coords and len(st.session_state.points) < 2:
+            st.session_state.points.append((int(coords['x']), int(coords['y'])))
 
-        # Draw points on image copy
-        if "points" in st.session_state:
-            for i, (x, y) in enumerate(st.session_state.points):
-                cv2.circle(image_copy, (x, y), 8, (0, 0, 255), -1)
-                cv2.putText(image_copy, f"P{i+1}", (x+10, y-10), cv2.FONT_HERSHEY_SIMPLEX, 0.5, (0, 0, 255), 1)
-
-        # Display only 1 image: with selected points
-        st.image(image_copy, caption="Click on the image to mark the reference object", channels="RGB")
-
+        # Reset button
         if st.button("🔄 Reset Points"):
             st.session_state.points = []
 
-        if "points" in st.session_state and len(st.session_state.points) == 2:
+        # Proceed if 2 points selected
+        if len(st.session_state.points) == 2:
             x1, y1 = st.session_state.points[0]
             x2, y2 = st.session_state.points[1]
 
