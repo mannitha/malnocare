@@ -48,17 +48,18 @@ def run_height_estimator():
         reference_length = st.number_input("Enter the real-world length of the reference object (in cm)", min_value=1.0, step=0.5)
 
         st.subheader("Step 1: Draw a line over the reference object")
-        canvas_result = st_canvas(
+       canvas_result = st_canvas(
             fill_color="rgba(255, 165, 0, 0.3)",
             stroke_width=3,
             stroke_color="#e00",
-            background_image=image,
+            background_image=img_np,  # NumPy array avoids image_to_url issue
             update_streamlit=True,
             height=img_np.shape[0],
             width=img_np.shape[1],
             drawing_mode="line",
-            key="canvas",
-        )
+             key="canvas",
+            )
+
 
         if canvas_result.json_data and "objects" in canvas_result.json_data:
             objs = canvas_result.json_data["objects"]
