@@ -27,15 +27,16 @@ def detect_keypoints(image):
 def draw_landmarks(image, head_y, foot_y):
     annotated = image.copy()
     center_x = image.shape[1] // 2
-    cv2.line(annotated, (center_x, head_y), (center_x, foot_y), (0,255,0), 2)
-    cv2.circle(annotated, (center_x, head_y), 5, (255,0,0), -1)
-    cv2.circle(annotated, (center_x, foot_y), 5, (0,0,255), -1)
+    cv2.line(annotated, (center_x, head_y), (center_x, foot_y), (0, 255, 0), 2)
+    cv2.circle(annotated, (center_x, head_y), 5, (255, 0, 0), -1)
+    cv2.circle(annotated, (center_x, foot_y), 5, (0, 0, 255), -1)
     return annotated
 
 def get_pixel_distance(p1, p2):
     return np.linalg.norm(np.array(p1) - np.array(p2))
 
 def run_height_estimator():
+    st.set_page_config(page_title="Height Estimator", layout="centered")
     st.title("📏 Height Estimator from Single Image")
     st.markdown("Upload a full-body image **with a visible reference object**, and specify its real-world length.")
 
@@ -43,6 +44,13 @@ def run_height_estimator():
     
     if img_file:
         image = Image.open(img_file)
+
+        # Resize image for canvas compatibility
+        max_width = 800
+        if image.width > max_width:
+            scale = max_width / image.width
+            image = image.resize((max_width, int(image.height * scale)))
+
         img_np = np.array(image)
 
         reference_length = st.number_input("Enter the real-world length of the reference object (in cm)", min_value=1.0, step=0.5)
@@ -52,7 +60,7 @@ def run_height_estimator():
             fill_color="rgba(255, 165, 0, 0.3)",
             stroke_width=3,
             stroke_color="#e00",
-            background_image=image,
+            background_image=image.convert("RGB"),
             update_streamlit=True,
             height=img_np.shape[0],
             width=img_np.shape[1],
