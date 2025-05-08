@@ -42,8 +42,7 @@ def run_height_estimator():
     img_file = st.file_uploader("Upload image", type=["jpg", "jpeg", "png"])
     
     if img_file:
-        image = Image.open(img_file)
-        img_np = np.array(image)
+        image = Image.open(img_file)  # Keep as PIL Image
 
         reference_length = st.number_input("Enter the real-world length of the reference object (in cm)", min_value=1.0, step=0.5)
 
@@ -52,10 +51,10 @@ def run_height_estimator():
             fill_color="rgba(255, 165, 0, 0.3)",
             stroke_width=3,
             stroke_color="#e00",
-            background_image=image,
+            background_image=image,  # Use PIL Image directly
             update_streamlit=True,
-            height=img_np.shape[0],
-            width=img_np.shape[1],
+            height=image.height,
+            width=image.width,
             drawing_mode="line",
             key="canvas",
         )
@@ -87,6 +86,7 @@ def run_height_estimator():
                 st.info("Draw a line over the known-length reference object.")
         else:
             st.info("Draw a line to calibrate using the reference object.")
+
 
 if __name__ == "__main__":
     run_height_estimator()
