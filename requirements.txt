@@ -2,5 +2,4 @@ streamlit
 opencv-python
 Pillow
 mediapipe
-streamlit-drawable-canvas
 streamlit-image-coordinates
