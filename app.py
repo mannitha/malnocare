@@ -27,9 +27,9 @@ def detect_keypoints(image):
 def draw_landmarks(image, head_y, foot_y):
     annotated = image.copy()
     center_x = image.shape[1] // 2
-    cv2.line(annotated, (center_x, head_y), (center_x, foot_y), (0,255,0), 2)
-    cv2.circle(annotated, (center_x, head_y), 5, (255,0,0), -1)
-    cv2.circle(annotated, (center_x, foot_y), 5, (0,0,255), -1)
+    cv2.line(annotated, (center_x, head_y), (center_x, foot_y), (0, 255, 0), 2)
+    cv2.circle(annotated, (center_x, head_y), 5, (255, 0, 0), -1)
+    cv2.circle(annotated, (center_x, foot_y), 5, (0, 0, 255), -1)
     return annotated
 
 def get_pixel_distance(p1, p2):
@@ -45,10 +45,13 @@ def run_height_estimator():
         image = Image.open(img_file)
         img_np = np.array(image)
 
-        reference_length = st.number_input("Enter the real-world length of the reference object (in cm)", min_value=1.0, step=0.5)
+        reference_length = st.number_input(
+            "Enter the real-world length of the reference object (in cm)", 
+            min_value=1.0, step=0.5
+        )
 
         st.subheader("Step 1: Draw a line over the reference object")
-       canvas_result = st_canvas(
+        canvas_result = st_canvas(
             fill_color="rgba(255, 165, 0, 0.3)",
             stroke_width=3,
             stroke_color="#e00",
@@ -57,9 +60,8 @@ def run_height_estimator():
             height=img_np.shape[0],
             width=img_np.shape[1],
             drawing_mode="line",
-             key="canvas",
-            )
-
+            key="canvas",
+        )
 
         if canvas_result.json_data and "objects" in canvas_result.json_data:
             objs = canvas_result.json_data["objects"]
@@ -68,7 +70,7 @@ def run_height_estimator():
                 x1, y1 = line["x1"], line["y1"]
                 x2, y2 = line["x2"], line["y2"]
                 pixel_dist = get_pixel_distance((x1, y1), (x2, y2))
-                calibration_factor = reference_length / pixel_dist  # user-defined cm / pixel
+                calibration_factor = reference_length / pixel_dist  # cm per pixel
 
                 st.success(f"Calibration complete: {calibration_factor:.4f} cm/pixel")
 
