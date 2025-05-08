@@ -1,58 +1,93 @@
 import streamlit as st
-from PIL import Image
+import cv2
 import numpy as np
-import math
-from streamlit_image_coordinates import st_image_coordinates
+from PIL import Image
+import mediapipe as mp
+from streamlit_image_coordinates import streamlit_image_coordinates
 
-# Function to calculate Euclidean distance between two points
-def euclidean(p1, p2):
-    return math.hypot(p1[0] - p2[0], p1[1] - p2[1])
+# Initialize MediaPipe
+mp_pose = mp.solutions.pose
 
-# Initialize session state to track coordinates
-if "clicks" not in st.session_state:
-    st.session_state.clicks = []
+def load_image(uploaded_file):
+    img = Image.open(uploaded_file).convert("RGB")
+    return cv2.cvtColor(np.array(img), cv2.COLOR_RGB2BGR)
 
-st.title("📏 Height Estimation Using Steel Scale Reference")
+def detect_keypoints(image):
+    with mp_pose.Pose(static_image_mode=True) as pose:
+        results = pose.process(cv2.cvtColor(image, cv2.COLOR_BGR2RGB))
+        if results.pose_landmarks:
+            h, w, _ = image.shape
+            landmarks = results.pose_landmarks.landmark
+            head_y = int(landmarks[mp_pose.PoseLandmark.NOSE].y * h)
+            foot_left_y = int(landmarks[mp_pose.PoseLandmark.LEFT_ANKLE].y * h)
+            foot_right_y = int(landmarks[mp_pose.PoseLandmark.RIGHT_ANKLE].y * h)
+            foot_y = max(foot_left_y, foot_right_y)
+            return head_y, foot_y
+    return None, None
 
-# Upload image
-img_file = st.file_uploader("Upload full-body image (with visible steel scale)", type=["jpg", "jpeg", "png"])
+def draw_landmarks(image, head_y, foot_y):
+    annotated = image.copy()
+    center_x = image.shape[1] // 2
+    cv2.line(annotated, (center_x, head_y), (center_x, foot_y), (0,255,0), 2)
+    cv2.circle(annotated, (center_x, head_y), 5, (255,0,0), -1)
+    cv2.circle(annotated, (center_x, foot_y), 5, (0,0,255), -1)
+    return annotated
 
-if img_file:
-    # Open and display the image
-    image = Image.open(img_file).convert("RGB")
-    img_array = np.array(image)
-    height, width = img_array.shape[:2]
+def get_pixel_distance(p1, p2):
+    return np.linalg.norm(np.array(p1) - np.array(p2))
 
-    st.image(image, caption="Click on the image to select points", use_column_width=True)
+def run_height_estimator():
+    st.title("📏 Height Estimator from Single Image")
+    st.markdown("Upload a full-body image **with a visible reference object**, and specify its real-world length.")
 
-    # Capture coordinates when the user clicks on the image
-    coords = st_image_coordinates(image)
+    img_file = st.file_uploader("Upload image", type=["jpg", "jpeg", "png"])
+    
+    if img_file:
+        image = Image.open(img_file).convert("RGB")
+        img_np = np.array(image)
 
-    if coords:
-        # Add new points to the session state clicks list
-        st.session_state.clicks.append(coords)
+        reference_length = st.number_input("Enter the real-world length of the reference object (in cm)", min_value=1.0, step=0.5)
 
-        # Display the clicked points
-        st.write("Clicked points:", st.session_state.clicks)
+        st.subheader("Step 1: Click two points on the reference object")
+        coords = streamlit_image_coordinates(image, key="click_img")
 
-        # Check if 4 points are selected: top of scale, bottom of scale, head, and feet
-        if len(st.session_state.clicks) == 4:
-            # Extract points
-            (sx1, sy1), (sx2, sy2), (hx, hy), (fx, fy) = st.session_state.clicks
+        # Handle click events
+        if coords:
+            if "points" not in st.session_state:
+                st.session_state.points = []
+            if len(st.session_state.points) < 2:
+                st.session_state.points.append((coords['x'], coords['y']))
 
-            # Calculate pixel distances
-            scale_pixels = euclidean((sx1, sy1), (sx2, sy2))
-            body_pixels = euclidean((hx, hy), (fx, fy))
+        # Show selected points
+        if "points" in st.session_state:
+            for i, (x, y) in enumerate(st.session_state.points):
+                st.write(f"Point {i+1}: ({x:.2f}, {y:.2f})")
 
-            # Known scale length (in cm)
-            reference_cm = 32.0
-            cm_per_pixel = reference_cm / scale_pixels
-            estimated_height = body_pixels * cm_per_pixel
+        # Reset button
+        if st.button("🔄 Reset Points"):
+            st.session_state.points = []
 
-            # Display results
-            st.success(f"Scale pixel distance: {scale_pixels:.2f} px")
-            st.success(f"Body pixel distance: {body_pixels:.2f} px")
-            st.success(f"Estimated Height: **{estimated_height:.2f} cm**")
+        # Proceed if two points selected
+        if "points" in st.session_state and len(st.session_state.points) == 2:
+            x1, y1 = st.session_state.points[0]
+            x2, y2 = st.session_state.points[1]
 
-    else:
-        st.warning("Click on the image to select points.")
+            pixel_dist = get_pixel_distance((x1, y1), (x2, y2))
+            calibration_factor = reference_length / pixel_dist
+            st.success(f"Calibration complete: {calibration_factor:.4f} cm/pixel")
+
+            st.subheader("Step 2: Estimating height from landmarks")
+            image_bgr = cv2.cvtColor(img_np, cv2.COLOR_RGB2BGR)
+            head_y, foot_y = detect_keypoints(image_bgr)
+
+            if head_y is not None and foot_y is not None:
+                pixel_height = abs(foot_y - head_y)
+                estimated_height = calibration_factor * pixel_height
+                annotated_img = draw_landmarks(image_bgr, head_y, foot_y)
+                st.image(annotated_img, caption="Detected Height", channels="BGR")
+                st.success(f"Estimated Height: **{estimated_height:.2f} cm**")
+            else:
+                st.error("❌ Could not detect body landmarks. Please try a clearer full-body image.")
+
+if __name__ == "__main__":
+    run_height_estimator()
