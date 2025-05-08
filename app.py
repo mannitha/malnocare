@@ -42,8 +42,8 @@ def run_height_estimator():
     img_file = st.file_uploader("Upload image", type=["jpg", "jpeg", "png"])
     
     if img_file:
-        image = Image.open(img_file).convert("RGB")
-        img_np = np.array(image)
+        original_image = Image.open(img_file).convert("RGB")
+        img_np = np.array(original_image)
 
         reference_length = st.number_input(
             "Enter the real-world length of the reference object (in cm)", 
@@ -53,14 +53,22 @@ def run_height_estimator():
 
         st.subheader("Step 1: Draw a line over the reference object")
 
+        # Resize image for consistent canvas display
+        max_canvas_width = 700
+        aspect_ratio = img_np.shape[0] / img_np.shape[1]
+        canvas_width = min(max_canvas_width, img_np.shape[1])
+        canvas_height = int(canvas_width * aspect_ratio)
+
+        resized_image = original_image.resize((canvas_width, canvas_height))
+
         canvas_result = st_canvas(
             fill_color="rgba(255, 165, 0, 0.3)",
             stroke_width=3,
             stroke_color="#e00",
-            background_image=image,  # ✅ Use PIL.Image directly
+            background_image=resized_image,  # ✅ Use resized image here
             update_streamlit=True,
-            height=img_np.shape[0],
-            width=img_np.shape[1],
+            height=canvas_height,
+            width=canvas_width,
             drawing_mode="line",
             key="canvas",
         )
@@ -77,7 +85,7 @@ def run_height_estimator():
                 st.success(f"Calibration complete: {calibration_factor:.4f} cm/pixel")
 
                 st.subheader("Step 2: Estimating height from landmarks")
-                image_bgr = cv2.cvtColor(np.array(image), cv2.COLOR_RGB2BGR)
+                image_bgr = cv2.cvtColor(np.array(original_image), cv2.COLOR_RGB2BGR)
                 head_y, foot_y = detect_keypoints(image_bgr)
 
                 if head_y is not None and foot_y is not None:
