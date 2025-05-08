@@ -47,25 +47,27 @@ def run_height_estimator():
 
         st.subheader("Step 1: Click two points on the reference object")
 
-        # Draw existing points
+        # Initialize points list
         if "points" not in st.session_state:
             st.session_state.points = []
 
+        # Draw existing points on image copy
         for i, (x, y) in enumerate(st.session_state.points):
             cv2.circle(image_copy, (x, y), 8, (0, 0, 255), -1)
             cv2.putText(image_copy, f"P{i+1}", (x+10, y-10), cv2.FONT_HERSHEY_SIMPLEX, 0.5, (0, 0, 255), 1)
 
-        # Use annotated image for click input
+        # Use the annotated image as the click input
         coords = streamlit_image_coordinates(Image.fromarray(image_copy), key="click_img")
 
+        # Save clicked coordinates (max 2)
         if coords and len(st.session_state.points) < 2:
             st.session_state.points.append((int(coords['x']), int(coords['y'])))
 
-        st.image(image_copy, caption="Click on the image to mark the reference object", channels="RGB")
-
+        # Reset button
         if st.button("🔄 Reset Points"):
             st.session_state.points = []
 
+        # Proceed if two points selected
         if len(st.session_state.points) == 2:
             x1, y1 = st.session_state.points[0]
             x2, y2 = st.session_state.points[1]
