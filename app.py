@@ -8,10 +8,6 @@ from streamlit_image_coordinates import streamlit_image_coordinates
 # Initialize MediaPipe
 mp_pose = mp.solutions.pose
 
-def load_image(uploaded_file):
-    img = Image.open(uploaded_file).convert("RGB")
-    return cv2.cvtColor(np.array(img), cv2.COLOR_RGB2BGR)
-
 def detect_keypoints(image):
     with mp_pose.Pose(static_image_mode=True) as pose:
         results = pose.process(cv2.cvtColor(image, cv2.COLOR_BGR2RGB))
@@ -45,33 +41,34 @@ def run_height_estimator():
     if img_file:
         image = Image.open(img_file).convert("RGB")
         img_np = np.array(image)
+        image_copy = img_np.copy()
 
         reference_length = st.number_input("Enter the real-world length of the reference object (in cm)", min_value=1.0, step=0.5)
 
         st.subheader("Step 1: Click two points on the reference object")
 
+        # Show image and get click coordinates
         coords = streamlit_image_coordinates(image, key="click_img")
 
-        # Handle click events and store points
+        # Store click points
         if coords:
             if "points" not in st.session_state:
                 st.session_state.points = []
             if len(st.session_state.points) < 2:
                 st.session_state.points.append((int(coords['x']), int(coords['y'])))
 
-        # Create preview image with clicked points
-        preview_image = img_np.copy()
+        # Draw points on image copy
         if "points" in st.session_state:
             for i, (x, y) in enumerate(st.session_state.points):
-                cv2.circle(preview_image, (int(x), int(y)), 8, (0, 0, 255), -1)  # red dot
-                cv2.putText(preview_image, f"P{i+1}", (int(x)+10, int(y)-10), cv2.FONT_HERSHEY_SIMPLEX, 0.5, (0, 0, 255), 1)
-            st.image(preview_image, caption="Selected Points", channels="RGB")
+                cv2.circle(image_copy, (x, y), 8, (0, 0, 255), -1)
+                cv2.putText(image_copy, f"P{i+1}", (x+10, y-10), cv2.FONT_HERSHEY_SIMPLEX, 0.5, (0, 0, 255), 1)
 
-        # Reset button
+        # Display only 1 image: with selected points
+        st.image(image_copy, caption="Click on the image to mark the reference object", channels="RGB")
+
         if st.button("🔄 Reset Points"):
             st.session_state.points = []
 
-        # Proceed if two points selected
         if "points" in st.session_state and len(st.session_state.points) == 2:
             x1, y1 = st.session_state.points[0]
             x2, y2 = st.session_state.points[1]
@@ -88,7 +85,7 @@ def run_height_estimator():
                 pixel_height = abs(foot_y - head_y)
                 estimated_height = calibration_factor * pixel_height
                 annotated_img = draw_landmarks(image_bgr, head_y, foot_y)
-                st.image(annotated_img, caption="Detected Height", channels="BGR")
+                st.image(annotated_img, caption="Estimated Height", channels="BGR")
                 st.success(f"Estimated Height: **{estimated_height:.2f} cm**")
             else:
                 st.error("❌ Could not detect body landmarks. Please try a clearer full-body image.")
