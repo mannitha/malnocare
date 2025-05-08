@@ -36,16 +36,10 @@ def run_height_estimator():
     st.markdown("Upload a full-body image **with a visible reference object**, and specify its real-world length.")
 
     img_file = st.file_uploader("Upload image", type=["jpg", "jpeg", "png"])
-    
+
     if img_file:
-        image = Image.open(img_file).convert("RGB")  # Ensure RGB mode
-
-        # Optional: Resize large images for display/canvas compatibility
-        MAX_WIDTH = 800
-        if image.width > MAX_WIDTH:
-            image = image.resize((MAX_WIDTH, int(MAX_WIDTH * image.height / image.width)))
-
-        st.image(image, caption="Uploaded Image Preview", use_column_width=True)  # Visual confirmation
+        image = Image.open(img_file).convert("RGB")
+        np_image = np.array(image)
 
         reference_length = st.number_input("Enter the real-world length of the reference object (in cm)", min_value=1.0, step=0.5)
 
@@ -54,7 +48,7 @@ def run_height_estimator():
             fill_color="rgba(255, 165, 0, 0.3)",
             stroke_width=3,
             stroke_color="#e00",
-            background_image=image,  # Must be a PIL Image
+            background_image=np_image,  # ✅ FIXED: convert to NumPy array
             update_streamlit=True,
             height=image.height,
             width=image.width,
@@ -69,12 +63,12 @@ def run_height_estimator():
                 x1, y1 = line["x1"], line["y1"]
                 x2, y2 = line["x2"], line["y2"]
                 pixel_dist = get_pixel_distance((x1, y1), (x2, y2))
-                calibration_factor = reference_length / pixel_dist  # cm / pixel
+                calibration_factor = reference_length / pixel_dist
 
                 st.success(f"Calibration complete: {calibration_factor:.4f} cm/pixel")
 
                 st.subheader("Step 2: Estimating height from landmarks")
-                image_bgr = cv2.cvtColor(np.array(image), cv2.COLOR_RGB2BGR)
+                image_bgr = cv2.cvtColor(np_image, cv2.COLOR_RGB2BGR)
                 head_y, foot_y = detect_keypoints(image_bgr)
 
                 if head_y is not None and foot_y is not None:
