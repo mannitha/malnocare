@@ -7,10 +7,6 @@ from streamlit_drawable_canvas import st_canvas
 
 mp_pose = mp.solutions.pose
 
-def load_image(uploaded_file):
-    img = Image.open(uploaded_file)
-    return cv2.cvtColor(np.array(img), cv2.COLOR_RGB2BGR)
-
 def detect_keypoints(image):
     with mp_pose.Pose(static_image_mode=True) as pose:
         results = pose.process(cv2.cvtColor(image, cv2.COLOR_BGR2RGB))
@@ -51,7 +47,10 @@ def run_height_estimator():
             scale = max_width / image.width
             image = image.resize((max_width, int(image.height * scale)))
 
+        # Convert and sanitize image for canvas
+        image = image.convert("RGB")
         img_np = np.array(image)
+        image_for_canvas = Image.fromarray(img_np)
 
         reference_length = st.number_input("Enter the real-world length of the reference object (in cm)", min_value=1.0, step=0.5)
 
@@ -60,7 +59,7 @@ def run_height_estimator():
             fill_color="rgba(255, 165, 0, 0.3)",
             stroke_width=3,
             stroke_color="#e00",
-            background_image=image.convert("RGB"),
+            background_image=image_for_canvas,  # ✅ FIXED: ensures image displays
             update_streamlit=True,
             height=img_np.shape[0],
             width=img_np.shape[1],
@@ -80,7 +79,7 @@ def run_height_estimator():
                 st.success(f"Calibration complete: {calibration_factor:.4f} cm/pixel")
 
                 st.subheader("Step 2: Estimating height from landmarks")
-                image_bgr = cv2.cvtColor(np.array(image), cv2.COLOR_RGB2BGR)
+                image_bgr = cv2.cvtColor(img_np, cv2.COLOR_RGB2BGR)
                 head_y, foot_y = detect_keypoints(image_bgr)
 
                 if head_y is not None and foot_y is not None:
