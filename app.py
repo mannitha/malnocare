@@ -48,26 +48,25 @@ def run_height_estimator():
         reference_length = st.number_input("Enter the real-world length of the reference object (in cm)", min_value=1.0, step=0.5)
 
         st.subheader("Step 1: Draw a line over the reference object")
+
+        # Convert image to in-memory buffer to fix streamlit_drawable_canvas issue
         from io import BytesIO
+        img_buffer = BytesIO()
+        image.save(img_buffer, format="PNG")
+        img_buffer.seek(0)
+        image_for_canvas = Image.open(img_buffer)
 
-# Convert PIL image to an in-memory file
-img_buffer = BytesIO()
-image.save(img_buffer, format="PNG")
-img_buffer.seek(0)
-image_for_canvas = Image.open(img_buffer)
-
-canvas_result = st_canvas(
-    fill_color="rgba(255, 165, 0, 0.3)",
-    stroke_width=3,
-    stroke_color="#e00",
-    background_image=image_for_canvas,
-    update_streamlit=True,
-    height=img_np.shape[0],
-    width=img_np.shape[1],
-    drawing_mode="line",
-    key="canvas",
-)
-
+        canvas_result = st_canvas(
+            fill_color="rgba(255, 165, 0, 0.3)",
+            stroke_width=3,
+            stroke_color="#e00",
+            background_image=image_for_canvas,
+            update_streamlit=True,
+            height=img_np.shape[0],
+            width=img_np.shape[1],
+            drawing_mode="line",
+            key="canvas",
+        )
 
         if canvas_result.json_data and "objects" in canvas_result.json_data:
             objs = canvas_result.json_data["objects"]
@@ -76,7 +75,7 @@ canvas_result = st_canvas(
                 x1, y1 = line["x1"], line["y1"]
                 x2, y2 = line["x2"], line["y2"]
                 pixel_dist = get_pixel_distance((x1, y1), (x2, y2))
-                calibration_factor = reference_length / pixel_dist  # user-defined cm / pixel
+                calibration_factor = reference_length / pixel_dist  # cm per pixel
 
                 st.success(f"Calibration complete: {calibration_factor:.4f} cm/pixel")
 
@@ -96,6 +95,7 @@ canvas_result = st_canvas(
                 st.info("Draw a line over the known-length reference object.")
         else:
             st.info("Draw a line to calibrate using the reference object.")
+
 
 if __name__ == "__main__":
     run_height_estimator()
